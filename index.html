@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Timer Kontes Fisik - Cyber Mode</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+        * { 
+            box-sizing: border-box; 
+            margin: 0; 
+            padding: 0; 
+            -webkit-tap-highlight-color: transparent; 
+            outline: none; 
+        }
+
+        body {
+            background-color: #050505;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Share Tech Mono', monospace;
+            user-select: none;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        /* Optimalisasi render 3D di HP low-end */
+        .jam-kotak {
+            background-color: #0d0d0d;
+            border: 2px solid #222;
+            border-radius: 12px;
+            padding: 25px 45px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8), inset 0 0 15px rgba(0,255,0,0.05);
+            margin-bottom: 50px;
+            display: inline-block;
+            transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+            will-change: transform;
+            transform: translate3d(0,0,0);
+        }
+
+        .jam-kotak.flipped { 
+            transform: translate3d(0,0,0) rotateY(180deg); 
+        }
+        
+        .jam-kotak.flipped .display { 
+            opacity: 0; 
+        }
+
+        .display {
+            font-size: 4.5rem;
+            color: #00ff66;
+            text-shadow: 0 0 12px rgba(0, 255, 102, 0.5);
+            letter-spacing: 2px;
+            font-variant-numeric: tabular-nums; 
+            display: inline-block;
+            white-space: nowrap;
+            will-change: opacity;
+            transition: opacity 0.2s ease;
+        }
+
+        @media (max-width: 600px) { 
+            .display { font-size: 2.8rem; } 
+            .jam-kotak { padding: 15px 25px; } 
+        }
+
+        .control-panel { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 35px; 
+            width: 100%; 
+            max-width: 400px; 
+        }
+
+        .btn-ijo-gede {
+            width: 130px; 
+            height: 130px;
+            background: radial-gradient(circle at 35% 35%, #00ff66 0%, #009933 70%, #004d1a 100%);
+            border: 4px solid #111;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 8px 0 #003311, 0 15px 20px rgba(0, 255, 102, 0.2);
+            transition: transform 0.05s ease, box-shadow 0.05s ease;
+            will-change: transform, box-shadow;
+        }
+
+        .btn-ijo-gede:active { 
+            transform: translate3d(0, 6px, 0); 
+            box-shadow: 0 2px 0 #003311, 0 5px 10px rgba(0, 255, 102, 0.4); 
+        }
+
+        .btn-merah-reset {
+            width: 50px; 
+            height: 50px;
+            background: #111;
+            border: 2px solid #ff3333;
+            border-radius: 50%;
+            color: #ff3333;
+            font-family: inherit;
+            font-weight: bold;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            transition: all 0.1s ease;
+        }
+
+        .btn-merah-reset:active { 
+            background: #ff3333; 
+            color: #111; 
+            transform: scale(0.95);
+        }
+
+        .spacer-kiri { width: 50px; }
+
+        .btn-challenge {
+            position: fixed; 
+            bottom: 25px; 
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 30px; 
+            background-color: #0f0f0f;
+            border: 1px solid #00ffff; 
+            color: #00ffff;
+            border-radius: 30px; 
+            font-family: inherit; 
+            font-weight: bold;
+            letter-spacing: 1px;
+            cursor: pointer; 
+            box-shadow: 0 0 10px rgba(0,255,255,0.1);
+            transition: all 0.2s ease;
+        }
+        
+        .btn-challenge:active {
+            background: #00ffff;
+            color: #000;
+        }
+
+        /* Modal Custom & Smooth */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 100; opacity: 0; pointer-events: none; 
+            transition: opacity 0.25s ease;
+        }
+
+        .modal-overlay.show { opacity: 1; pointer-events: auto; }
+
+        .modal-content {
+            background-color: #0d0d0d; 
+            border: 1px solid #333; 
+            border-radius: 16px;
+            padding: 25px; 
+            width: 88%; 
+            max-width: 350px; 
+            text-align: center; 
+            color: #ffffff;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            transform: translate3d(0, 10px, 0);
+            transition: transform 0.25s ease;
+        }
+        
+        .modal-overlay.show .modal-content {
+            transform: translate3d(0, 0, 0);
+        }
+
+        .modal-content h3 {
+            margin-bottom: 20px;
+            font-size: 1.4rem;
+            letter-spacing: 1px;
+        }
+
+        /* Custom Modern Checkbox / Toggle */
+        .option-group { 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between;
+            margin: 18px 0; 
+            cursor: pointer; 
+            text-align: left; 
+        }
+
+        .custom-switch {
+            position: relative;
+            width: 44px;
+            height: 22px;
+            background-color: #222;
+            border-radius: 11px;
+            transition: background-color 0.2s;
+        }
+
+        .custom-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px; left: 2px;
+            width: 18px; height: 18px;
+            background-color: #aaa;
+            border-radius: 50%;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+
+        .option-group input { display: none; }
+
+        .option-group input:checked + .custom-switch {
+            background-color: #00ff66;
+        }
+
+        .option-group input:checked + .custom-switch::after {
+            transform: translate3d(22px, 0, 0);
+            background-color: #050505;
+        }
+        
+        /* Modern Select Cyberpunk Style */
+        .cyber-select {
+            width: 100%; 
+            padding: 12px; 
+            margin: 10px 0 20px 0; 
+            background: #151515; 
+            color: #00ff66; 
+            border: 1px solid #333;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 1rem;
+            appearance: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        .btn-close-modal { 
+            width: 100%; 
+            padding: 12px; 
+            background-color: transparent; 
+            border: 1px solid #00ff66; 
+            color: #00ff66; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-family: inherit;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+        
+        .btn-close-modal:active {
+            background-color: #00ff66;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="jam-kotak" id="clock-box">
+        <div class="display" id="timer-display">00:00:00:00</div>
+    </div>
+    
+    <div class="control-panel">
+        <div class="spacer-kiri"></div>
+        <button class="btn-ijo-gede" id="main-btn" aria-label="Start Stop"></button>
+        <button class="btn-merah-reset" id="reset-btn">R</button>
+    </div>
+
+    <button class="btn-challenge" id="challenge-btn">SETTINGS</button>
+
+    <div class="modal-overlay" id="setting-modal">
+        <div class="modal-content">
+            <h3 style="color: #00ffff;">CHALLENGE CONFIG</h3>
+            
+            <label class="option-group">
+                <span>Enable Challenge Mode</span>
+                <input type="checkbox" id="challenge-active-checkbox">
+                <div class="custom-switch"></div>
+            </label>
+
+            <select id="target-select" class="cyber-select">
+                <option value="1000">00:00:01:00 (1 Second)</option>
+                <option value="2000">00:00:02:00 (2 Seconds)</option>
+                <option value="3000">00:00:03:00 (3 Seconds)</option>
+                <option value="4000">00:00:04:00 (4 Seconds)</option>
+                <option value="5000">00:00:05:00 (5 Seconds)</option>
+                <option value="10000">00:00:10:00 (10 Seconds)</option>
+                <option value="670">00:00:00:67 (Brainrot Special)</option>
+            </select>
+
+            <label class="option-group">
+                <span>Blind Mode (Flip Display)</span>
+                <input type="checkbox" id="blind-checkbox">
+                <div class="custom-switch"></div>
+            </label>
+
+            <button class="btn-close-modal" id="save-challenge-btn" style="border-color: #00ffff; color: #00ffff;">APPLY CHANGES</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="score-modal">
+        <div class="modal-content" style="border-color: #ff00ff;">
+            <h3 style="color:#ff00ff">EVALUATION</h3>
+            <div id="final-time-display" style="font-size: 2.3rem; color: #fff; margin: 15px 0; font-weight: bold;"></div>
+            <p id="feedback-text" style="margin-bottom: 25px; color: #aaa; min-height: 20px;"></p>
+            <button class="btn-close-modal" id="close-score-btn" style="border-color: #ff00ff; color: #ff00ff;">TRY AGAIN</button>
+        </div>
+    </div>
+
+    <script>
+        let startTime = 0, elapsedTime = 0, timerInterval = null, isRunning = false;
+        let isChallengeMode = false, challengeTarget = 1000, blindModeActive = false;
+
+        const displayEl = document.getElementById('timer-display'), clockBox = document.getElementById('clock-box');
+        const mainBtn = document.getElementById('main-btn'), resetBtn = document.getElementById('reset-btn');
+        const audioFeedback = new Audio('t.wav');
+
+        function playClickSound() { audioFeedback.currentTime = 0; audioFeedback.play().catch(() => {}); }
+        
+        function formatTime(ms) {
+            let h = Math.floor(ms / 3600000).toString().padStart(2, '0');
+            let m = Math.floor((ms % 3600000) / 60000).toString().padStart(2, '0');
+            let s = Math.floor((ms % 60000) / 1000).toString().padStart(2, '0');
+            let cs = Math.floor((ms % 1000) / 10).toString().padStart(2, '0');
+            return `${h}:${m}:${s}:${cs}`;
+        }
+
+        function updateDisplay() { displayEl.textContent = formatTime(elapsedTime); }
+
+        function evaluateResult() {
+            if (!isChallengeMode) return; 
+            
+            const diff = Math.abs(elapsedTime - challengeTarget);
+            let message = "Not quite, try again!";
+            if (diff === 0) message = "Perfect! Absolute legend.";
+            else if (diff <= 50) message = "Wow, almost there!";
+            
+            document.getElementById('final-time-display').textContent = formatTime(elapsedTime);
+            document.getElementById('feedback-text').textContent = message;
+            
+            setTimeout(() => { document.getElementById('score-modal').classList.add('show'); }, 400);
+        }
+
+        function startTimer() {
+            // Delta time tracking yang sangat konsisten di performa device apapun
+            let lastTime = performance.now();
+            if (blindModeActive) clockBox.classList.add('flipped');
+            
+            function update(now) {
+                if (!isRunning) return;
+                let delta = now - lastTime;
+                lastTime = now;
+                elapsedTime += delta;
+                
+                if (!blindModeActive) updateDisplay();
+                timerInterval = requestAnimationFrame(update);
+            }
+            timerInterval = requestAnimationFrame(update);
+        }
+
+        mainBtn.addEventListener('click', () => {
+            playClickSound();
+            if (!isRunning) { 
+                isRunning = true; 
+                startTimer(); 
+            } else { 
+                isRunning = false; 
+                cancelAnimationFrame(timerInterval); 
+                if (blindModeActive) clockBox.classList.remove('flipped'); 
+                updateDisplay(); 
+                evaluateResult();
+            }
+        });
+
+        resetBtn.addEventListener('click', () => { 
+            playClickSound(); 
+            isRunning = false; 
+            cancelAnimationFrame(timerInterval); 
+            clockBox.classList.remove('flipped'); 
+            elapsedTime = 0; 
+            updateDisplay(); 
+        });
+
+        document.getElementById('challenge-btn').addEventListener('click', () => { playClickSound(); document.getElementById('setting-modal').classList.add('show'); });
+        document.getElementById('save-challenge-btn').addEventListener('click', () => {
+            playClickSound();
+            isChallengeMode = document.getElementById('challenge-active-checkbox').checked;
+            challengeTarget = parseInt(document.getElementById('target-select').value);
+            blindModeActive = document.getElementById('blind-checkbox').checked;
+            document.getElementById('setting-modal').classList.remove('show');
+        });
+        document.getElementById('close-score-btn').addEventListener('click', () => { playClickSound(); document.getElementById('score-modal').classList.remove('show'); });
+    </script>
+</body>
+</html>
